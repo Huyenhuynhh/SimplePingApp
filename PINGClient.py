@@ -24,6 +24,9 @@ def positive_integer(value, arg_num):
     except ValueError: 
         raise argparse.ArgumentTypeError(f"ERR - arg {arg_num}")
 
+def valid_client_id(value):
+    return positive_integer(value, 3)
+
 def num_requests(value):
     return positive_integer(value, 4)
 
@@ -32,25 +35,17 @@ def wait_time(value):
 
 class CustomArgumentParser(argparse.ArgumentParser):
     def error(self, message):
-        arg_mapping = {
-            "server": 1,
-            "server_port": 2,
-            "client_id": 3,
-            "num_requests": 4,
-            "wait_time": 5
-        }
-        
-        for arg_name, arg_number in arg_mapping.items():
-            if arg_name in message:
-                sys.stderr.write(f'ERR - {}')
+            sys.stderr.write(f'ERR - {message}\n')
+            self.print_help()
+            sys.exit(2)
 
 # Argument parsing Ex: <hostname> or <ip> <port_number> <clientID> <number_of_ping_request> <wait_time>
 parser = argparse.ArgumentParser(description='UDP PINGClient')
-parser.add_argument('server', help='Hostname or IP addess of the ping server')
+parser.add_argument('server', help='Hostname or IP address of the ping server')
 parser.add_argument('server_port', type=int, help='Port number the server is running on')
-parser.add_argument('client_id', type=int, help='ClientID')
-parser.add_argument('num_requests', type=int, help='Number of ping requests to send')
-parser.add_argument('wait_time', type=int, help='Number of wait seconds for each packet')
+parser.add_argument('client_id', type=valid_client_id, help='ClientID')
+parser.add_argument('num_requests', type=num_requests, help='Number of ping requests to send')
+parser.add_argument('wait_time', type=wait_time, help='Number of wait seconds for each packet')
 args = parser.parse_args()
 
 client_ip = '127.0.0.1'
@@ -92,7 +87,7 @@ for sequence_no in range(1, args.num_requests + 1):
     header = struct.pack('!B I I d I', version, args.client_id, sequence_no, timestamp, random_data_size)
 
 
-    message = f"Ping! from ClientID: {args.client_id}{random_data}"
+    # message = f"Ping! from ClientID: {args.client_id}{random_data}"
     packet = header + message.encode()
 
     # send ping meassage to the server
