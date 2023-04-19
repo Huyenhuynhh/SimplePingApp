@@ -6,10 +6,11 @@ import random
 import string
 import struct
 
+# ensure port number is a positive integerless than 65536
 def port_number(value):
     try:
         ivalue = int(value)
-        if ivalue < 1 or ivalue > 65535:
+        if ivalue < 1 or ivalue > 65536:
             raise argparse.ArgumentTypeError(f"ERR - arg 2")
         return ivalue
     except:
@@ -49,7 +50,7 @@ parser.add_argument('wait_time', type=wait_time, help='Number of wait seconds fo
 args = parser.parse_args()
 
 client_ip = '127.0.0.1'
-client_port = 11000
+client_port = args.port
 
 # create a UDP socket 
 # domain which is the address family used when set up the socket: socket.AF_INET
@@ -60,15 +61,7 @@ clientSock.settimeout(args.wait_time)
 # bind the socket to the clients IP address and port 
 clientSock.bind((client_ip, client_port))
 
-print(f"PINGClient started with server IP: {args.server}, port: {args.server_port}, client ID: {args.client_id}, packets: {args.num_requests}, wait: {args.wait_time}")
-
-# handle excetion
-try:
-    # hostname or ip of the ping server
-    server_ip = socket.gethostbyname(args.server)
-except socket.gaierror:
-    print("ERR - Unable to resolve hostname")
-    sys.exit(1)
+print(f"PINGClient started with server IP: {args.server}, port: {server_port}, client ID: {args.client_id}, packets: {args.num_requests}, wait: {args.wait_time}")
 
 version = 1
 
