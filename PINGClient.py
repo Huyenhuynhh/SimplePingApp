@@ -13,7 +13,7 @@ def port_number(value):
         if ivalue < 1 or ivalue > 65536:
             raise argparse.ArgumentTypeError(f"ERR - arg 2")
         return ivalue
-    except:
+    except ValueError:
         raise argparse.ArgumentTypeError(f"ERR - arg 2")
 
 def positive_integer(value, arg_num):
@@ -34,23 +34,17 @@ def num_requests(value):
 def wait_time(value):
     return positive_integer(value, 5)
 
-class CustomArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
-            sys.stderr.write(f'ERR - {message}\n')
-            self.print_help()
-            sys.exit(2)
-
 # Argument parsing Ex: <hostname> or <ip> <port_number> <clientID> <number_of_ping_request> <wait_time>
 parser = argparse.ArgumentParser(description='UDP PINGClient')
-parser.add_argument('server', help='Hostname or IP address of the ping server')
+parser.add_argument('server_ip', type=str, help='Hostname or IP address of the ping server')
 parser.add_argument('server_port', type=int, help='Port number the server is running on')
 parser.add_argument('client_id', type=valid_client_id, help='ClientID')
 parser.add_argument('num_requests', type=num_requests, help='Number of ping requests to send')
 parser.add_argument('wait_time', type=wait_time, help='Number of wait seconds for each packet')
 args = parser.parse_args()
 
-client_ip = '127.0.0.1'
-client_port = args.port
+client_ip = '10.0.0.1'
+client_port = args.server_port
 
 # create a UDP socket 
 # domain which is the address family used when set up the socket: socket.AF_INET
@@ -59,9 +53,9 @@ clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 clientSock.settimeout(args.wait_time)
 
 # bind the socket to the clients IP address and port 
-clientSock.bind((client_ip, client_port))
+# clientSock.bind((client_ip, client_port))
 
-print(f"PINGClient started with server IP: {args.server}, port: {server_port}, client ID: {args.client_id}, packets: {args.num_requests}, wait: {args.wait_time}")
+print(f"PINGClient started with server IP: {args.server_ip}, port: {args.server_port}, client ID: {args.client_id}, packets: {args.num_requests}, wait: {args.wait_time}")
 
 version = 1
 
@@ -72,22 +66,25 @@ total_rtt = 0.0
 total_payload_size = 0 
 
 for sequence_no in range(1, args.num_requests + 1):
-    random_data_size = random.randint(150, 300)
-    random_data = ''.join(random.choices(string.printable, k=random_data_size))
-
+    host = args.server_ip
+    class_name = "VCU-CMSC440-SPRING-2023"
+    user_name = "Huyen, Huynh"
+    rest = ''.join(random.choices(string.printable, k=random.randint(150, 300)))
+    formatted_payload = f"{host}::{class_name}::{user_name}::{rest}"
+    random_data_size = len(formatted_payload)
+    
     # custom header
     timestamp = time.time()
     header = struct.pack('!B I I d I', version, args.client_id, sequence_no, timestamp, random_data_size)
 
+    packet = header + formatted_payload.encode()
 
-    # message = f"Ping! from ClientID: {args.client_id}{random_data}"
-    packet = header + message.encode()
 
     # send ping meassage to the server
     start_time = time.time()
 
     try:
-        clientSock.sendto(message.encode(), (server_ip, args.server_port))
+        clientSock.sendto(packet, (args.server_ip, args.server_port))
 
         # if data is received back from server, print
         data, addr = clientSock.recvfrom(1024)
@@ -102,32 +99,34 @@ for sequence_no in range(1, args.num_requests + 1):
         print(f"Version: {recv_version}")
         print(f"ClientID: {recv_client_id}")
         print(f"Sequence No: {recv_sequence_no}")
-        print(f"Time: {recv_timestamp}")
+        print(f"Time: {recv_timestamp:.3f}")
         print(f"Payload size: {recv_size}")
 
         # print request payload 
         username = "Huyen, Huynh"
         print("-------- Ping Request Packet Payload --------")
-        print(f"Host: {args.server}")
+        print(f"Host: {args.server_ip}")
         print("Class-name: VCU-CMSC440-SPRING-2023")
         print("User-name: " + username)
-        print(f"Rest: {random_data}")
+        print(f"Rest: {rest}")
         print("---------------------------------------------")
 
         # print ping response if received 
         print(f"-------- Received Ping Response Packet Header --------")
         print(f"Version: {recv_version}")
         print(f"ClientID: {recv_client_id}")
-        print(f"Sequence No: {recv_sequence_no}")
-        print(f"Time: {recv_timestamp}")
+        print(f"Sequence No.: {recv_sequence_no}")
+        print(f"Time: {recv_timestamp:.3f}")
         print(f"Payload size: {recv_size}")
 
         # print ping response payload if received 
         print("-------- Received Ping Response Packet Payload --------")
-        print(f"Host: {args.server.upper()}")
+        print(f"Host: {args.server_ip.upper()}")
         print("Class-name: VCU-CMSC440-SPRING-2023")
         print("User-name: " + username.upper())
-        print(f"Rest: {recv_payload.decode().upper()}") 
+        rest_data = recv_payload.decode().split('::', 3)[3]
+        print(f"Rest: {rest_data.upper()}")
+
 
         # calculate RTT
         rtt = end_time - recv_timestamp
@@ -135,7 +134,7 @@ for sequence_no in range(1, args.num_requests + 1):
         max_rtt = max(max_rtt, rtt)
         total_rtt += rtt
         received_packets += 1
-        print("RTT: {:.6f} seconds".format(rtt))
+        print("RTT: {:.3f} seconds".format(rtt))
 
     except socket.error as e:
         print(f"ERR - Socket error: {e}")
