@@ -29,7 +29,7 @@ parser.add_argument('server_port', type=port_number, help='Port that will listen
 parser.add_argument('packet_loss', type=packet_loss, help='percentage of packet drop')
 args = parser.parse_args()
 
-server_ip = '10.0.0.1'
+server_ip = '0.0.0.0'
 server_port = args.server_port
 
 # if port number is already being taken by another active socket 
@@ -101,4 +101,3 @@ while True:
 
     response_header = struct.pack('!B I I d I', recv_version, recv_client_id, recv_sequence_no, recv_timestamp, recv_size)
     response_packet = response_header + response_payload
-    serverSock.sendto(response_packet, addr)
